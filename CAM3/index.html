@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTZ CAM Controller</title>
+    
+    <!-- Bootstrap Color Theme Toggler -->
+    <script src="../bootstrap-5.3.8-dist/js/color-modes.js"></script>
+
+    <!-- Bootstrap CSS -->
+    <link href="../bootstrap-5.3.8-dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CSS -->
+    <link href="../bootstrap-icons-1.13.1/bootstrap-icons.min.css" rel="stylesheet">
+
+    <style>
+        body { user-select: none; -webkit-user-select: none; }
+        .d-pad { display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(3, 65px); gap: 8px; justify-content: center; }
+        /* .d-pad .invisible { visibility: hidden; } */
+
+        .bi { width: 1em; height: 1em; /* vertical-align: -.125em; */ fill: currentcolor; }
+        .navbar .dropdown-menu .active .bi { display: block !important; }
+        .navbar .dropdown-menu-end { --bs-dropdown-min-width: 8rem; }
+        
+        /* .btn.btn-preset.save-success { background-color: var(--bs-success) !important; } */
+        .btn.btn-preset.save-progress { background-color: var(--bs-warning-bg-subtle) !important; border-color: var(--bs-warning-border-subtle) !important; color: var(--bs-warning-text-emphasis) !important; }
+        .btn.btn-preset.save-success { background-color: var(--bs-success-bg-subtle) !important; border-color: var(--bs-success-border-subtle) !important; color: var(--bs-success-text-emphasis) !important; }
+        .btn.btn-preset.save-error { background-color: var(--bs-danger-bg-subtle) !important; border-color: var(--bs-danger-border-subtle) !important; color: var(--bs-danger-text-emphasis) !important; }
+        .btn.btn-preset:active, .btn.btn-hold:active { background-color: var(--bs-primary-bg-subtle); border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+        .btn.btn-preset.active > span.d-none { display: revert !important; }
+        
+        .status-pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+        .status-pulse.online { background-color: #198754; animation: pulse-online 2s infinite; }
+        .status-pulse.offline { background-color: #dc3545; animation: pulse-offline 2s infinite; }
+
+        .status-online { animation: pulse-online 2s infinite; }
+        .status-offline { animation: pulse-offline 2s infinite; }
+
+        @keyframes pulse-online  { 0% { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(0,255,0,0.5); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0,255,0,0); } 100% { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(0,255,0,0); } }
+        @keyframes pulse-offline { 0% { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(255,0,0,0.5); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255,0,0,0); } 100% { transform: scale(0.75); box-shadow: 0 0 0 0 rgba(255,0,0,0); } }
+    </style>
+</head>
+<body class="_bg-light">
+
+    <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+        <symbol id="check2" viewBox="0 0 16 16">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"></path>
+        </symbol>
+        <symbol id="circle-half" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"></path>
+        </symbol>
+        <symbol id="moon-stars-fill" viewBox="0 0 16 16">
+            <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"></path>
+            <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"></path>
+        </symbol>
+        <symbol id="sun-fill" viewBox="0 0 16 16">
+            <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"></path>
+        </symbol>
+    </svg>
+
+    <!-- Touch- & Maus-Sensor oben links in der Bildschirmecke -->
+    <div id="eckenSensor" class="fixed-top end-100">
+        <button type="button" class="btn _btn-lg btn-outline-secondary text-body-secondary border-0">
+            <i class="bi-chevron-expand"></i>
+        </button>
+    </div>
+
+    <!-- Header -->
+    <header id="zeitElement" class="navbar navbar-expand bg-body-secondary _navbar-white _bg-white shadow-sm px-4 mb-4 fixed-top fade show">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold _text-dark" href="#">
+                <!-- ICHH Logo -->
+                <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="27.854 8.423 53.429 50.387" class="d-inline-block align-text-top bg-light rounded-circle" width="31"> -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="26 7.5 59 57" class="d-inline-block align-text-top bg-light rounded-circle" width="31">
+                    <defs></defs>
+                    <path fill="#f9b233" d="M73.71,16.44c-10.5-10.5-27.52-10.5-38.02,0-11.85,11.6-9.98,31.82,3.71,41.12-11.65-9.69-12.46-27.65-1.67-38.32,13.73-14.01,38.18-7.61,43.38,11.17-.97-5.12-3.44-10.01-7.4-13.97" id="object-0"></path>
+                    <g id="object-1">
+                        <path fill="#2e6f88" d="M34.11,41.93v.88h.53v4.93c.33-.04.65-.07.99-.1v-4.83h.45v-1.21h-.16l-3.44-7.65-.15-.48-.32.22,2.41,8.09-.32.15h0ZM32.94,35.41l2.78,6.2h-.92l-1.87-6.2h0Z"></path>
+                        <path fill="#2e6f88" d="M46.55,47.11c4.03.12,8.06.64,11.28,1.1v-5.37c.46.03.95.06,1.45.11l-.17,5.45c.58.08,1.12.16,1.63.24l-.04-5.56c.41.04.82.07,1.23.12l-.24,1.3,1.64,2.08-.23.64-.03,1.69c1.03.07,1.79.02,3.41-.1v-1.72l-.18-.57,1.7-2.28v-.05c1.69.48,3.08,1.09,4.08,1.61l-.15.73.63,1.11.22.4c1.81-.32,3.22-.68,4.42-1.16h-.02s-2.72-8.41-2.72-8.42l-.1-4.2-.41.24-.35-.26-.02,3.8-2.63,5.25c-.13-.05-.25-.09-.38-.14l-5.08-12.78-.14-5.82-.6.35-.52-.38-.04,5.92-.08.45-3.48,7.94-.05-6.77,1.37-.61v-.6h-1.39l-.02-1.75,1.83-.71v-.64h-1.85l-.02-1.36h.59v-.26h-.6v-.65h.96v-.28h-.97v-.58h.97v-.28h-.98v-.54h.77v-.64h-.78v-.54h.63v-.27h-.63v-.75h.63v-.27h-.65l-.06-5.34h-.2v-2.62h-.11v2.62h-.23l-.1,5.34h-.69v.27h.69v.75h-.69v.27h.67v.54h-.79v.64h.77v.54h-.92v.28h.91v.58h-.91v.28h.89v.65h-.62v.26h.6l-.03,1.36h-1.88v.59l1.85.79-.03,1.72h-1.39v.54l1.37.67-.28,8.87c-.52-.05-1.02-.11-1.51-.15v-9.83c-1.76,1.27-3.11-.22-3.74-1.5,0,0-1.79,3.1-3.53,3.21s-1.82-.32-1.82-.32c0,0-1.36,3.58-3.21,3.63s-2.46-1.18-2.46-1.18c0,0-.66,1.82-2.36,1.92-1.69.11-1.69-.11-1.69-.11l.16,10.71c2.48-.18,5.08-.29,7.36-.23h.02l.07.03ZM72.46,43.9c-.15-.07-.31-.15-.47-.21l1.12-3.02-.65,3.24h0ZM76.94,46.72c-.23-.15-.55-.35-.93-.63l-1.41-6.63,2.35,7.27h0ZM75.33,45.58c-.24-.18-.45-.36-.73-.53l-.46-4.86,1.19,5.39ZM74,40.65l.41,4.25c-.19-.12-.4-.24-.63-.37,0,0,.22-3.88.22-3.88ZM73.83,40.09l-.24,4.34c-.17-.09-.35-.18-.54-.28l.8-4.06h-.02ZM73.53,38.58l-.17.86-1.55,4.17c-.22-.09-.44-.18-.66-.26l2.38-4.76h0ZM61.3,41.16l2.44-8.02-1.47,8.14c-.32-.04-.64-.08-.97-.12ZM65.57,45.92l-1.43.04-1.35-1.6,4.03-.25-1.25,1.82h0ZM67.68,42.19s-.05,0-.06-.02l-1.99-10.28,3.44,10.71c-.45-.15-.92-.29-1.4-.43h0v.02ZM70.34,43.04c-.34-.12-.69-.24-1.04-.35l-3.76-11.72h-.02v-.05l4.82,12.13h0ZM66.73,41.97c-.25-.05-.53-.11-.83-.15l-.73-7.79,1.56,7.95h0ZM65.7,41.78c-.44-.07-.92-.15-1.42-.23l.63-8.21.79,8.44h0ZM64.78,32.03l.02.08v.08l-.71,9.33c-.34-.05-.67-.09-1.02-.14l1.71-9.35h0ZM63.91,31.91l-2.81,9.23c-.15-.02-.28-.04-.42-.05v-1.79l3.23-7.39h0Z"></path>
+                        <path fill="#2e6f88" d="M36.69,41.86v.88h.53v4.75c.33-.03.65-.05.99-.08v-4.67h.45v-1.21h-.16l-3.44-7.65-.15-.48-.32.22,2.41,8.09-.32.15h0ZM35.5,35.34l2.78,6.2h-.92l-1.87-6.2h0Z"></path>
+                    </g>
+                    <path fill="#88a4b0" d="M56.76,49.33c11.68,1.35,16.16.63,21.71-2.31-1.06,2.47-3.9,3.9-6.73,4.72-4.25,1.06-8.49,2.12-21.64-1.21-10.76-2.28-15.88-1.97-15.88-1.97,13.33-1.3,22.53.78,22.53.78h0Z"></path>
+                    <path fill="#2e6f88" d="M78.95,47.81s-2.36,10.42-19.48,5.83c0,0,17.44,1.46,19.57-6.38"></path>
+                </svg>
+                <i class="bi-camera-video-fill"></i>
+                <span class="d-none d-sm-inline-block">PTZ CAM Controller</span>
+            </a>
+            <!-- <div class="d-flex align-items-center gap-3"> -->
+            <ul class="navbar-nav _d-flex align-items-center _gap-3">
+                <li class="nav-item">
+                    <span id="navbarCamStatusBadge" class="badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center px-2 py-1">
+                        <span id="navbarCamStatusIndicator" class="status-pulse offline"></span>
+                        <span id="navbarCamStatusText">Offline</span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <button class="_btn _btn-link nav-link fw-semibold _text-light-emphasis d-flex align-items-center gap-1 _p-0" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                        <i class="bi-gear-fill"></i>
+                        <span class="d-none d-sm-inline-block">Einstellungen</span>
+                    </button>
+                </li>
+                <li class="nav-item dropdown">
+                    <button class="_btn _btn-link nav-link _px-0 _px-lg-2 _py-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button" aria-expanded="true" data-bs-toggle="dropdown" data-bs-display="static" aria-label="Toggle theme (auto)">
+                        <svg class="bi my-1 theme-icon-active" aria-hidden="true">
+                            <use href="#circle-half"></use>
+                        </svg>
+                        <span class="d-none ms-2" id="bd-theme-text">Toggle theme</span>
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text" data-bs-popper="static">
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+                                <svg class="bi me-2 opacity-50" aria-hidden="true">
+                                    <use href="#sun-fill"></use>
+                                </svg>
+                                Light
+                                <svg class="bi ms-auto d-none" aria-hidden="true">
+                                    <use href="#check2"></use>
+                                </svg>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
+                                <svg class="bi me-2 opacity-50" aria-hidden="true">
+                                    <use href="#moon-stars-fill"></use>
+                                </svg>
+                                Dark
+                                <svg class="bi ms-auto d-none" aria-hidden="true">
+                                    <use href="#check2"></use>
+                                </svg>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="auto" aria-pressed="true">
+                                <svg class="bi me-2 opacity-50" aria-hidden="true">
+                                    <use href="#circle-half"></use>
+                                </svg>
+                                Auto
+                                <svg class="bi ms-auto d-none" aria-hidden="true">
+                                    <use href="#check2"></use>
+                                </svg>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <!-- Closing-X (wichtig für Mobilgeräte, verhindert Fehlklicks auf Links) -->
+                    <button type="button" id="schliessenButton" class="nav-link btn-close" aria-label="Schließen"></button>
+                </li>
+            </ul>
+            <!-- </div> -->
+        </div>
+    </header>
+
+    <!-- Hauptbereich -->
+    <!-- <main class="container" style="max-width: 420px;"> -->
+    <main class="container">
+        <div class="row g-4">
+            <!-- Cam Info Card -->
+            <div class="col-12">
+                <div class="card text-center">
+                    <h4 class="card-header" id="cardHeader">
+                        <i class="bi-camera-video pe-3"></i>PTZ CAM Controller<i class="bi-camera-video ps-3"></i>
+                    </h4>
+                    <div class="card-body">
+                        <h5 class="card-title" id="cardBodyTitle">
+                            <a href="#" class="nav-link d-flex justify-content-center gap-2" target="_blank">
+                                <span>CAM 1</span>
+                                <i class="bi-box-arrow-up-right"></i>
+                            </a>
+                        </h5>
+                        <h6 class="card-subtitle mb-2 text-body-secondary" id="cardBodySubtitle">Kamera 1</h6>
+                        <p class="d-none card-text" id="cardBodyText">Geschwindigkeiten Schwenken, Neigen, Zoom, Fokus</p>
+                        <a href="#" class="d-none btn btn-primary" id="cardBodyLink">CAM-Web-UI</a>
+                    </div>
+                    <div class="card-footer text-body-secondary" id="cardFooter">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div>IPv4-Adresse:</div>
+                            <div id="cardFooterCamIp">192.168.100.12</div>
+                            <div id="cardFooterCamStatusText" class="ms-auto text-danger-emphasis">Offline</div>
+                            <div>
+                                <i id="cardFooterCamStatusIndicator" class="bi-wifi-off d-inline-block px-1 rounded-circle status-offline text-danger-emphasis bg-danger-subtle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Presets -->
+            <div class="col-md-6">
+                <!-- <div class="text-muted text-center text-uppercase small tracking-wider mb-1 fw-semibold">Presets</div>
+                <div class="text-center text-muted small mb-1">(Halten zum Speichern)</div> -->
+                <div class="text-secondary-emphasis text-center mb-1">
+                    <span class="text-uppercase fw-semibold">Presets</span>
+                    <span class="small">(Halten zum Speichern)</span>
+                </div>
+                <div class="p-3 bg-light-subtle border rounded shadow-sm">
+                    <div class="row row-cols-3 g-2">
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="1">
+                                <i class="bi-1-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 1</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="2">
+                                <i class="bi-2-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 2</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="3">
+                                <i class="bi-3-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 3</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="4">
+                                <i class="bi-4-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 4</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="5">
+                                <i class="bi-5-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 5</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="6">
+                                <i class="bi-6-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 6</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="7">
+                                <i class="bi-7-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 7</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="8">
+                                <i class="bi-8-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 8</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-secondary border border-dark-subtle w-100 py-1 _fw-bold fs-1 btn-preset position-relative" data-preset="9">
+                                <i class="bi-9-circle-fill"></i>
+                                <span class="d-none position-absolute top-0 start-0 _translate-middle p-2 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Preset 9</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-light border border-dark-subtle w-100 py-3 fw-bold fs-5 btn-preset" data-preset="11">
+                                <i class="bi-arrows-move pe-3"></i> Pan (autom. Schwenk)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Steuerung -->
+            <div class="col-md-6">
+                <!-- <div class="text-muted text-center text-uppercase small tracking-wider mb-1 fw-semibold">Live-Steuerung</div>
+                <div class="text-center text-muted small mb-1">(Halten zum Bewegen)</div> -->
+                <div class="text-secondary-emphasis text-center mb-1">
+                    <span class="text-uppercase fw-semibold">Live-Steuerung</span>
+                    <span class="small">(Halten zum Bewegen)</span>
+                </div>
+                <div class="p-4 bg-light-subtle border rounded shadow-sm d-flex flex-column align-items-center gap-4">
+                    <!-- D-Pad -->
+                    <div class="d-pad">
+                        <div class="invisible"></div>
+                        <button class="btn btn-light border border-dark-subtle fs-4 p-0 d-flex align-items-center justify-content-center btn-hold" data-type="ptz" data-action="up"><i class="bi-caret-up-fill"></i></button>
+                        <div class="invisible"></div>
+                        <button class="btn btn-light border border-dark-subtle fs-4 p-0 d-flex align-items-center justify-content-center btn-hold" data-type="ptz" data-action="left"><i class="bi-caret-left-fill"></i></button>
+                        <button class="btn btn-secondary text-white fs-5 p-0 d-flex align-items-center justify-content-center" onclick="goHome()"><i class="bi-house-door-fill"></i></button>
+                        <button class="btn btn-light border border-dark-subtle fs-4 p-0 d-flex align-items-center justify-content-center btn-hold" data-type="ptz" data-action="right"><i class="bi-caret-right-fill"></i></button>
+                        <div class="invisible"></div>
+                        <button class="btn btn-light border border-dark-subtle fs-4 p-0 d-flex align-items-center justify-content-center btn-hold" data-type="ptz" data-action="down"><i class="bi-caret-down-fill"></i></button>
+                        <div class="invisible"></div>
+                    </div>
+
+                    <!-- Zoom/Fokus -->
+                    <div class="row w-100 g-3">
+                        <div class="col-6 d-flex flex-column gap-2">
+                            <button class="btn btn-light border border-dark-subtle py-2 fw-semibold btn-hold" data-type="zoom" data-action="in"><i class="bi-zoom-in"></i> Zoom +</button>
+                            <button class="btn btn-light border border-dark-subtle py-2 fw-semibold btn-hold" data-type="zoom" data-action="out"><i class="bi-zoom-out"></i> Zoom -</button>
+                        </div>
+                        <div class="col-6 d-flex flex-column gap-2">
+                            <button class="btn btn-light border border-dark-subtle py-2 fw-semibold btn-hold" data-type="focus" data-action="near"><i class="bi-eye"></i> Fokus +</button>
+                            <button class="btn btn-light border border-dark-subtle py-2 fw-semibold btn-hold" data-type="focus" data-action="far"><i class="bi-eye-slash"></i> Fokus -</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Einstellungen Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="settingsModalTitle">
+                        <i class="bi-gear-fill me-2"></i> Einstellungen
+                        <span id="settingsModalTitlePrimary">CAM 1</span>
+                        <span id="settingsModalTitleSecondary" class="small">Bühne rechts</span>
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settingsForm" novalidate>
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="cameraIpInput" placeholder="xxx.xxx.xxx.xxx" required="">
+                            <label for="cameraIpInput" class="form-label">Kamera IP-Adresse</label>
+                            <div class="invalid-feedback" id="cameraIpInvalidFeedback">Bitte gib eine gültige IP-Adresse ein (z.B. 192.168.100.11).</div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="row">
+                                <div class="form-floating col-6">
+                                    <input type="text" class="form-control" id="cameraNameInput" placeholder="CAM 1" required="">
+                                    <label for="cameraNameInput" class="form-label">eindeutiger Kameraname</label>
+                                    <div class="invalid-feedback" id="cameraNameInvalidFeedback">Bitte keine Sonderzeichen!</div>
+                                </div>
+                                <div class="form-floating col-6">
+                                    <input type="text" class="form-control" id="cameraAliasInput" placeholder="Bühne rechts" required="">
+                                    <label for="cameraAliasInput" class="form-label">beschreibender Kameraname</label>
+                                    <div class="invalid-feedback" id="cameraAliasInvalidFeedback">Bitte keine Sonderzeichen!</div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="panSpeedInput" class="form-label">Pan Speed (Schwenken)</label>
+                                <!-- <span class="badge bg-secondary" id="panValue">12</span> -->
+                                <button type="button" title="Reset Pan Speed" class="btn btn-sm btn-primary position-relative pe-3" id="panSpeedReset">
+                                    <i class="bi-arrow-clockwise"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark-subtle" id="panValue"></span>
+                                </button>
+                            </div>
+                            <input type="range" class="form-range" id="panSpeedInput" min="1" max="24" value="1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="tiltSpeedInput" class="form-label">Tilt Speed (Neigen)</label>
+                                <!-- <span class="badge bg-secondary" id="tiltValue">10</span> -->
+                                <button type="button" title="Reset Tilt Speed" class="btn btn-sm btn-primary position-relative pe-3" id="tiltSpeedReset">
+                                    <i class="bi-arrow-clockwise"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark-subtle" id="tiltValue"></span>
+                                </button>
+                            </div>
+                            <input type="range" class="form-range" id="tiltSpeedInput" min="1" max="20" value="1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="zoomSpeedInput" class="form-label">Zoom Speed (Zoomen)</label>
+                                <!-- <span class="badge bg-secondary" id="zoomValue">4</span> -->
+                                <button type="button" title="Reset Zoom Speed" class="btn btn-sm btn-primary position-relative pe-3" id="zoomSpeedReset">
+                                    <i class="bi-arrow-clockwise"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark-subtle" id="zoomValue"></span>
+                                </button>
+                            </div>
+                            <input type="range" class="form-range" id="zoomSpeedInput" min="1" max="7" value="1">
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="focusSpeedInput" class="form-label">Focus Speed (Fokussieren)</label>
+                                <!-- <span class="badge bg-secondary" id="focusValue">4</span> -->
+                                <button type="button" title="Reset Focus Speed" class="btn btn-sm btn-primary position-relative pe-3" id="focusSpeedReset">
+                                    <i class="bi-arrow-clockwise"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark-subtle" id="focusValue"></span>
+                                </button>
+                            </div>
+                            <input type="range" class="form-range" id="focusSpeedInput" min="1" max="7" value="1">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi-x-square"></i> Schließen
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveSettings();">
+                        <i class="bi-floppy"></i> Speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="../bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Import Default Config Settings -->
+    <script src="./config.js"></script>
+
+    <script>
+        let settings, base_url, active_preset;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applySettings();
+            applySlidersSettingsToUI();
+            setupSliders();
+            checkCamera();
+            setupPresetButtons();
+            setInterval(checkCamera, CHECK_INTERVAL);
+        });
+
+        // Settings aus localstorage Key laden oder defaults nutzen
+        function applySettings() {
+            if (settings) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+            } else {
+                let storedData = localStorage.getItem(STORAGE_KEY);
+                settings = storedData ? JSON.parse(storedData) : { ...DEFAULT_SETTINGS };
+            }
+            base_url = `http://${settings.camera_ip}${HTTP_API_PATH}`;
+        }
+        
+        // Werte der UI anpassen (Slider-Positionen und Badges)
+        function applySlidersSettingsToUI() {
+            // update settings form values
+            document.getElementById('cameraIpInput').value    = settings.camera_ip;
+            document.getElementById('cameraNameInput').value  = settings.camera_name;
+            document.getElementById('cameraAliasInput').value = settings.camera_alias;
+
+            // UI update (settings form)
+            document.getElementById('settingsModalTitlePrimary').textContent   = settings.camera_name;
+            document.getElementById('settingsModalTitleSecondary').textContent = settings.camera_alias;
+
+            // UI update (card)
+            /* document.getElementById('cardHeader').textContent       = settings.camera_name;
+            document.getElementById('cardBodySubtitle').textContent = settings.camera_ip;
+            document.getElementById('cardFooter').textContent       = settings.camera_alias; */
+
+            // UI update (card)
+            document.getElementById('cardBodySubtitle').textContent   = settings.camera_alias;
+            document.getElementById('cardFooterCamIp').textContent    = settings.camera_ip;
+            // document.getElementById('cardHeader').textContent         = settings.camera_name;
+            // document.getElementById('cardBodyTitle').textContent      = settings.camera_name;
+            const cardBodyTitle = document.getElementById('cardBodyTitle');
+            cardBodyTitle.querySelector('span').textContent = settings.camera_name;
+            //cardBodyTitle.querySelector('a').setAttribute('href', `http://${settings.camera_ip}`) = settings.camera_name;
+            
+            const sliders = [
+                { id: 'panSpeedInput',   val: settings.speed_pan,   badgeId: 'panValue',   def: DEFAULT_SETTINGS.speed_pan   },
+                { id: 'tiltSpeedInput',  val: settings.speed_tilt,  badgeId: 'tiltValue',  def: DEFAULT_SETTINGS.speed_tilt  },
+                { id: 'zoomSpeedInput',  val: settings.speed_zoom,  badgeId: 'zoomValue',  def: DEFAULT_SETTINGS.speed_zoom  },
+                { id: 'focusSpeedInput', val: settings.speed_focus, badgeId: 'focusValue', def: DEFAULT_SETTINGS.speed_focus }
+            ];
+
+            sliders.forEach(s => {
+                const el = document.getElementById(s.id);
+                if (el) {
+                    el.value = s.val;
+                    el.defaultValue = s.def;
+                    document.getElementById(s.badgeId).innerText = s.val;
+                }
+            });
+        }
+
+        function setupSliders() {
+            const bind = (id, target, reset) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', (e) => document.getElementById(target).innerText = e.target.value);
+                    document.getElementById(reset).addEventListener('click', (e) => {
+                        el.value = el.defaultValue;
+                        el.dispatchEvent(new Event('input', { 'bubbles': true, 'cancelable': true }));
+                    });
+                }
+            };
+            bind('panSpeedInput',   'panValue',   'panSpeedReset');
+            bind('tiltSpeedInput',  'tiltValue',  'tiltSpeedReset');
+            bind('zoomSpeedInput',  'zoomValue',  'zoomSpeedReset');
+            bind('focusSpeedInput', 'focusValue', 'focusSpeedReset');
+        }
+
+        // IPv4 Validierungs-Muster
+        function validateIP(ip) {
+            const pattern = /^(25[0-5]|2[0-4][0-32-9]|[01]?\d\d?)\.(25[0-5]|2[0-4][0-9]|[01]?\d\d?)\.(25[0-5]|2[0-4][0-9]|[01]?\d\d?)\.(25[0-5]|2[0-4][0-9]|[01]?\d\d?)$/;
+            return pattern.test(ip.trim());
+        }
+
+        // Text Validierungs-Muster
+        function validateText(str) {
+            const pattern = /^[a-zA-Z0-9äöüÄÖÜß\s,.\-_!?]+$/;
+            return pattern.test(str.trim());
+        }
+
+        function checkCamera() {
+            /* const controller = new AbortController();
+            setTimeout(() => controller.abort(), 2000);
+            fetch(base_url, { mode: 'no-cors', signal: controller.signal }) */
+            fetch(base_url, { mode: 'no-cors', signal: AbortSignal.timeout(2000) })
+                .then(() => { updateUI(true); })
+                .catch(() => { updateUI(false); });
+        }
+
+        function updateUI(online) {
+            document.title = `${APP_TITLE} | ${settings.camera_name} | ${(online ? 'Online' : 'Offline')} | ${settings.camera_ip}`;
+            // online status indicator (nav)
+            document.getElementById('navbarCamStatusBadge').className     = online ? "badge bg-success-subtle text-success border border-success-subtle d-flex align-items-center px-2 py-1" : "badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center px-2 py-1";
+            document.getElementById('navbarCamStatusIndicator').className = online ? "status-pulse online" : "status-pulse offline";
+            document.getElementById('navbarCamStatusText').textContent    = online ? "Online" : "Offline";
+            // online status indicator (card)
+            const cardFooterCamStatusIndicator = document.getElementById('cardFooterCamStatusIndicator');
+            const cardFooterCamStatusText = document.getElementById('cardFooterCamStatusText');
+            if (online) {
+                cardFooterCamStatusText.textContent = 'Online';
+                cardFooterCamStatusText.classList.replace('text-danger-emphasis', 'text-success-emphasis');
+                cardFooterCamStatusIndicator.classList.replace('bi-wifi-off', 'bi-wifi');
+                cardFooterCamStatusIndicator.classList.replace('status-offline', 'status-online');
+                cardFooterCamStatusIndicator.classList.replace('text-danger-emphasis', 'text-success-emphasis');
+                cardFooterCamStatusIndicator.classList.replace('bg-danger-subtle', 'bg-success-subtle');
+            } else {
+                cardFooterCamStatusText.textContent = 'Offline';
+                cardFooterCamStatusText.classList.replace('text-success-emphasis', 'text-danger-emphasis');
+                cardFooterCamStatusIndicator.classList.replace('bi-wifi', 'bi-wifi-off');
+                cardFooterCamStatusIndicator.classList.replace('status-online', 'status-offline');
+                cardFooterCamStatusIndicator.classList.replace('text-success-emphasis', 'text-danger-emphasis');
+                cardFooterCamStatusIndicator.classList.replace('bg-success-subtle', 'bg-danger-subtle');
+            }
+        }
+
+        function saveSettings() {
+            const ipInput = document.getElementById('cameraIpInput');
+            const ipVal = ipInput.value.trim();
+
+            const nameInput = document.getElementById('cameraNameInput');
+            const nameVal = nameInput.value.trim();
+
+            const aliasInput = document.getElementById('cameraAliasInput');
+            const aliasVal = aliasInput.value.trim();
+
+            // IP check
+            if (!validateIP(ipVal)) {
+                ipInput.classList.add('is-invalid');
+                return;
+            } else {
+                ipInput.classList.remove('is-invalid');
+            }
+
+            // String check Name
+            if (!validateText(nameVal)) {
+                nameInput.classList.add('is-invalid');
+                return;
+            } else {
+                nameInput.classList.remove('is-invalid');
+            }
+
+            // String check Alias
+            if (!validateText(aliasVal)) {
+                aliasInput.classList.add('is-invalid');
+                return;
+            } else {
+                aliasInput.classList.remove('is-invalid');
+            }
+
+            // Objekt aktualisieren
+            settings.camera_ip = ipVal;
+            settings.camera_name = nameVal,
+            settings.camera_alias = aliasVal,
+            settings.speed_pan = parseInt(document.getElementById('panSpeedInput').value);
+            settings.speed_tilt = parseInt(document.getElementById('tiltSpeedInput').value);
+            settings.speed_zoom = parseInt(document.getElementById('zoomSpeedInput').value);
+            settings.speed_focus = parseInt(document.getElementById('focusSpeedInput').value);
+            
+            // settings aktualisieren
+            applySettings();
+            // UI update
+            applySlidersSettingsToUI();
+            // online status prüfen
+            checkCamera();
+
+            bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+        }
+
+        function sendHttpCmd(type, action) {
+            let ptzcmd = "";
+
+            if (action === "stop") {
+                if (type === "ptz")
+                    ptzcmd = "ptzstop";
+                if (type === "zoom")
+                    ptzcmd = "zoomstop";
+                if (type === "focus")
+                    ptzcmd = "focusstop";
+            } else if (type === "ptz") {
+                if (action === "up")
+                    ptzcmd = `up&${settings.speed_pan}&${settings.speed_tilt}`;
+                if (action === "down")
+                    ptzcmd = `down&${settings.speed_pan}&${settings.speed_tilt}`;
+                if (action === "left")
+                    ptzcmd = `left&${settings.speed_pan}&${settings.speed_tilt}`;
+                if (action === "right")
+                    ptzcmd = `right&${settings.speed_pan}&${settings.speed_tilt}`;
+            } else if (type === "zoom") {
+                ptzcmd = action === "in" ? `zoomin&${settings.speed_zoom}` : `zoomout&${settings.speed_zoom}`;
+            } else if (type === "focus") {
+                ptzcmd = action === "near" ? `focusin&${settings.speed_focus}` : `focusout&${settings.speed_focus}`;
+            }
+
+            const url = `${base_url}?ptzcmd&${ptzcmd}`;
+            fetch(url, { mode: 'no-cors' }).catch(() => {});
+        }
+
+        async function triggerPreset(n) {
+            const url = `${base_url}?ptzcmd&poscall&${n}`;
+            let result;
+            await fetch(url, { mode: 'no-cors' })
+                .then(() => { result = true; })
+                .catch(() => { result = false; });
+            return result;
+        }
+
+        async function savePreset(n) {
+            const url = `${base_url}?ptzcmd&posset&${n}`;
+            let result;
+            await fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(2000) })
+                .then(() => { result = true; })
+                .catch(() => { result = false; });
+            return result;
+        }
+        
+        function goHome() { 
+            const url = `${base_url}?ptzcmd&home`;
+            fetch(url, { mode: 'no-cors' }).catch(() => {});
+        }
+
+        function setupPresetButtons() {
+            document.querySelectorAll('.btn-preset').forEach(btn => {
+                const num = btn.getAttribute('data-preset');
+                let pressTimer;
+                let isLongPress = false;
+
+                const start = (e) => {
+                    e.preventDefault();
+                    isLongPress = false;
+                    //btn.classList.add('bg-secondary-subtle');
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        btn.classList.add('save-progress');
+                        savePreset(num).then((success) => {
+                            btn.classList.replace('save-progress', (success ? 'save-success' : 'save-error'));
+                            setTimeout(() => btn.classList.remove('save-progress', 'save-success', 'save-error'), 1000);
+                        });
+                        // btn.classList.remove('bg-secondary-subtle');
+                        // btn.classList.add('save-success');
+                        //setTimeout(() => btn.classList.remove('save-progress', 'save-success', 'save-error'), 600);
+                    }, 2000);
+                };
+
+                const end = () => {
+                    clearTimeout(pressTimer);
+                    //btn.classList.remove('bg-secondary-subtle');
+                    if (!isLongPress) {
+                        triggerPreset(num).then((success) => {
+                            if (active_preset) active_preset.classList.remove('active');
+                            if (success) {
+                                btn.classList.add('active');
+                                active_preset = btn;
+                            }
+                        });
+                    }
+                };
+
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+                btn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+                btn.addEventListener('touchstart', start, { passive: false });
+                btn.addEventListener('touchend', end);
+                btn.addEventListener('touchcancel', end);
+            });
+        }
+
+        document.querySelectorAll('.btn-hold').forEach(btn => {
+            const type = btn.getAttribute('data-type');
+            const act = btn.getAttribute('data-action');
+
+            const start = (e) => {
+                e.preventDefault();
+                /***
+                let speedType = "none";
+                if (act.startsWith('ptz') || type === "ptz") speedType = "ptz";
+                if (act.startsWith('focus') || type === "focus") speedType = "focus";
+                if (act.startsWith('zoom') || type === "zoom") speedType = "zoom";
+                ***/
+                sendHttpCmd(type, act);
+            };
+
+            const stop = () => {
+                sendHttpCmd(type, "stop");
+            };
+
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', stop);
+            btn.addEventListener('mouseleave', stop);
+            btn.addEventListener('touchstart', start, { passive: false });
+            btn.addEventListener('touchend', stop);
+            btn.addEventListener('touchcancel', stop);
+        });
+    </script>
+
+    <script>
+        // Elemente aus dem DOM laden
+        const element = document.getElementById('zeitElement');
+        const sensor = document.getElementById('eckenSensor');
+        const schliessenButton = document.getElementById('schliessenButton');
+        let ausblendeTimer;
+
+        // Initialer Start: Navbar nach dem Laden der Seite für 4 Sekunden anzeigen
+        starteAusblendeTimer(4000);
+
+        // Zentrale Funktion zum Einblenden (wird von Maus und Touch genutzt)
+        function einblendenUndVerzoegertAusblenden() {
+            clearTimeout(ausblendeTimer); 
+            element.classList.remove('d-none'); // Layout-Aktivierung
+            
+            // Minimaler Delay, damit Bootstrap die CSS-Fade-Animation triggert
+            setTimeout(() => {
+                element.classList.add('show'); // CSS-Fade-In triggern
+                starteAusblendeTimer(5000); // Bleibt nach Aktivierung 5 Sekunden offen
+            }, 10);
+        }
+
+        // --- TRIGGER FÜR DIE BILDSCHIRMECKE ---
+        sensor.addEventListener('mouseenter', einblendenUndVerzoegertAusblenden); // Desktop: Maus in die Ecke
+        sensor.addEventListener('click', einblendenUndVerzoegertAusblenden);      // Mobil: Fingertipp in die Ecke
+
+        // --- DESKTOP: HOVER-SCHUTZ DIREKT AUF DER NAVBAR ---
+        element.addEventListener('mouseenter', () => {
+            // kleines Delay, stellt sicher, dass die Einblendefunktion den Timer starten konnte
+            setTimeout(() => {
+                clearTimeout(ausblendeTimer); // Stoppt den Timer, solange die Maus auf der Navbar ruht
+            }, 20);
+        });
+
+        element.addEventListener('mouseleave', () => {
+            starteAusblendeTimer(2000); // Startet 2-Sekunden-Countdown beim Verlassen der Navbar
+        });
+
+        // --- MANUELLES SCHLIESSEN ÜBER DAS "X" ---
+        schliessenButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Verhindert, dass der Klick fälschlicherweise andere Events auslöst
+            starteAusblendeTimer(0);  // Blendet die Navbar sofort aus
+        });
+
+        // --- KERN-FUNKTION: TIMEOUT & BOOTSTRAP-ANIMATION ---
+        function starteAusblendeTimer(ms) {
+            clearTimeout(ausblendeTimer); // Alte Timer-Instanzen löschen
+            
+            ausblendeTimer = setTimeout(() => {
+                element.classList.remove('show'); // Bootstrap Fade-Out starten
+                
+                // Nach Ablauf der CSS-Transition (150ms) die Navbar komplett verstecken
+                element.addEventListener('transitionend', function() {
+                    // Sicherheitsabfrage: Nur verstecken, wenn kein neuer Einblende-Befehl kam
+                    if (!element.classList.contains('show')) {
+                        element.classList.add('d-none');
+                    }
+                }, { once: true });
+            }, ms);
+        }
+    </script>
+</body>
+</html>
